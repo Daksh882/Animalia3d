@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANIMALIA 3D | Neon Encyclopedia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Rajdhani', sans-serif; 
+            overflow-x: hidden; 
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #e9d5ff 100%);
+            color: #581c87;
+            min-height: 100vh;
+        }
+        
+        h1, h2, h3, .orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        #canvas-container { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 0; 
+            pointer-events: none;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 
+                0 8px 32px 0 rgba(147, 51, 234, 0.15),
+                inset 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        
+        .neon-text {
+            text-shadow: 
+                0 0 10px rgba(147, 51, 234, 0.8),
+                0 0 20px rgba(147, 51, 234, 0.4),
+                0 0 40px rgba(147, 51, 234, 0.2);
+        }
+        
+        .neon-border {
+            box-shadow: 
+                0 0 5px rgba(168, 85, 247, 0.5),
+                0 0 20px rgba(168, 85, 247, 0.3),
+                inset 0 0 20px rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(168, 85, 247, 0.4);
+        }
+        
+        .neon-border:hover {
+            box-shadow: 
+                0 0 10px rgba(168, 85, 247, 0.8),
+                0 0 30px rgba(168, 85, 247, 0.5),
+                0 0 50px rgba(168, 85, 247, 0.3),
+                inset 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        
+        .search-glow:focus { 
+            box-shadow: 
+                0 0 30px rgba(147, 51, 234, 0.4),
+                inset 0 0 20px rgba(255, 255, 255, 0.6);
+            border-color: #a855f7;
+            outline: none;
+        }
+        
+        .animal-card {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            background: rgba(255, 255, 255, 0.4);
+        }
+        
+        .animal-card:hover { 
+            transform: translateY(-15px) rotateX(5deg) scale(1.03); 
+            box-shadow: 
+                0 25px 50px rgba(147, 51, 234, 0.25),
+                0 0 40px rgba(168, 85, 247, 0.3);
+            background: rgba(255, 255, 255, 0.6);
+            border-color: rgba(168, 85, 247, 0.6);
+        }
+        
+        .star-rating { 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+            color: #e9d5ff;
+            font-size: 3rem;
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+        }
+        
+        .star-rating:hover { 
+            transform: scale(1.3) rotate(15deg); 
+            color: #fbbf24;
+            text-shadow: 
+                0 0 20px rgba(251, 191, 36, 0.8),
+                0 0 40px rgba(251, 191, 36, 0.5);
+        }
+        
+        .star-active { 
+            color: #fbbf24; 
+            text-shadow: 
+                0 0 15px rgba(251, 191, 36, 1),
+                0 0 30px rgba(251, 191, 36, 0.7);
+            transform: scale(1.2);
+        }
+        
+        .category-land { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
+        }
+        
+        .category-water { 
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+        }
+        
+        .category-air { 
+            background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.4);
+        }
+        
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(147, 51, 234, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(147, 51, 234, 0.08) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+        
+        .floating-3d {
+            animation: float3d 8s ease-in-out infinite;
+            transform-style: preserve-3d;
+        }
+        
+        @keyframes float3d {
+            0%, 100% { transform: translateY(0px) rotateY(0deg) rotateX(0deg); }
+            25% { transform: translateY(-15px) rotateY(5deg) rotateX(2deg); }
+            50% { transform: translateY(-25px) rotateY(0deg) rotateX(0deg); }
+            75% { transform: translateY(-15px) rotateY(-5deg) rotateX(-2deg); }
+        }
+        
+        .neon-button {
+            background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+            box-shadow: 
+                0 0 15px rgba(147, 51, 234, 0.4),
+                0 0 30px rgba(147, 51, 234, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .neon-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+        
+        .neon-button:hover::before {
+            left: 100%;
+        }
+        
+        .neon-button:hover {
+            box-shadow: 
+                0 0 25px rgba(147, 51, 234, 0.7),
+                0 0 50px rgba(147, 51, 234, 0.4);
+            transform: translateY(-3px) scale(1.02);
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.35);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            box-shadow: 
+                0 0 20px rgba(147, 51, 234, 0.15),
+                inset 0 0 20px rgba(255, 255, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 
+                0 10px 30px rgba(147, 51, 234, 0.25),
+                inset 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        
+        .geometric-shape {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+        
+        .shape-ring {
+            position: absolute;
+            inset: 0;
+            border: 3px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            animation: rotate3d 8s linear infinite;
+        }
+        
+        .shape-ring:nth-child(2) {
+            inset: 15px;
+            border-color: rgba(255, 255, 255, 0.25);
+            animation-duration: 12s;
+            animation-direction: reverse;
+        }
+        
+        .shape-ring:nth-child(3) {
+            inset: 30px;
+            border-color: rgba(255, 255, 255, 0.5);
+            animation-duration: 6s;
+        }
+        
+        .shape-core {
+            position: absolute;
+            inset: 35px;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            transform: rotate(45deg);
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.4);
+        }
+        
+        @keyframes rotate3d {
+            0% { transform: rotateX(0deg) rotateY(0deg); }
+            100% { transform: rotateX(360deg) rotateY(360deg); }
+        }
+        
+        .cyber-grid {
+            position: fixed;
+            bottom: -100px;
+            left: -50%;
+            right: -50%;
+            height: 50vh;
+            background: 
+                linear-gradient(to top, rgba(147, 51, 234, 0.15), transparent),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 100px,
+                    rgba(168, 85, 247, 0.1) 100px,
+                    rgba(168, 85, 247, 0.1) 101px
+                ),
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 100px,
+                    rgba(168, 85, 247, 0.1) 100px,
+                    rgba(168, 85, 247, 0.1) 101px
+                );
+            pointer-events: none;
+            z-index: 1;
+            transform: perspective(1000px) rotateX(60deg);
+            transform-origin: bottom;
+            animation: gridMove 20s linear infinite;
+        }
+        
+        @keyframes gridMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100px; }
+        }
+        
+        .loading-bar {
+            background: linear-gradient(90deg, #a855f7, #ec4899, #a855f7);
+            background-size: 200% 100%;
+            animation: loading 2s linear infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 100% 0%; }
+            100% { background-position: -100% 0%; }
+        }
+        
+        .modal-overlay {
+            background: rgba(88, 28, 135, 0.3);
+            backdrop-filter: blur(20px);
+        }
+        
+        .holographic-shine {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .holographic-shine::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 30%,
+                rgba(255, 255, 255, 0.3) 50%,
+                transparent 70%
+            );
+            animation: shine 3s infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .glow-text {
+            animation: glowPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes glowPulse {
+            0%, 100% { text-shadow: 0 0 20px rgba(147, 51, 234, 0.5); }
+            50% { text-shadow: 0 0 40px rgba(147, 51, 234, 0.8), 0 0 60px rgba(168, 85, 247, 0.4); }
+        }
+        
+        .filter-btn {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .filter-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: #9333ea;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        
+        .filter-btn:hover::after {
+            width: 80%;
+        }
+        
+        .filter-btn.active {
+            color: #9333ea;
+            font-weight: 700;
+        }
+        
+        .filter-btn.active::after {
+            width: 100%;
+        }
+        
+        .detail-3d-container {
+            perspective: 1000px;
+        }
+        
+        .detail-3d-shape {
+            transform-style: preserve-3d;
+            animation: detailRotate 15s linear infinite;
+        }
+        
+        @keyframes detailRotate {
+            0% { transform: rotateX(0deg) rotateY(0deg); }
+            100% { transform: rotateX(360deg) rotateY(360deg); }
+        }
+    </style>
+</head>
+<body class="grid-bg">
+
+    <!-- Cyber Grid Floor -->
+    <div class="cyber-grid"></div>
+
+    <!-- Three.js Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-panel border-b border-purple-300/50 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-4 floating-3d cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center neon-border relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                    <span class="text-white font-black text-2xl orbitron relative z-10">A</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-black tracking-wider neon-text text-purple-900 orbitron">ANIMALIA<span class="text-purple-600">3D</span></h1>
+                    <p class="text-xs text-purple-700 font-bold tracking-[0.3em] uppercase">Neon Encyclopedia</p>
+                </div>
+            </div>
+            
+            <div class="hidden md:flex gap-8 text-sm font-bold tracking-wider items-center">
+                <button onclick="filterAnimals('all')" class="filter-btn active text-purple-800 hover:text-purple-600 transition-all" data-filter="all">ALL</button>
+                <button onclick="filterAnimals('land')" class="filter-btn text-purple-800 hover:text-green-600 transition-all" data-filter="land">LAND</button>
+                <button onclick="filterAnimals('water')" class="filter-btn text-purple-800 hover:text-blue-600 transition-all" data-filter="water">WATER</button>
+                <button onclick="filterAnimals('air')" class="filter-btn text-purple-800 hover:text-purple-600 transition-all" data-filter="air">BIRDS</button>
+                <button onclick="openFeedback()" class="neon-button px-8 py-3 rounded-full text-white font-bold tracking-wider text-sm uppercase ml-4">
+                    Feedback
+                </button>
+            </div>
+            
+            <!-- Mobile Menu Button -->
+            <button class="md:hidden text-purple-900 text-2xl" onclick="toggleMobileMenu()">☰</button>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="hidden md:hidden glass-panel border-t border-purple-300/30">
+            <div class="flex flex-col p-6 gap-4">
+                <button onclick="filterAnimals('all')" class="text-left text-purple-900 font-bold py-2">ALL SPECIES</button>
+                <button onclick="filterAnimals('land')" class="text-left text-purple-900 font-bold py-2">LAND ANIMALS</button>
+                <button onclick="filterAnimals('water')" class="text-left text-purple-900 font-bold py-2">MARINE LIFE</button>
+                <button onclick="filterAnimals('air')" class="text-left text-purple-900 font-bold py-2">BIRDS</button>
+                <button onclick="openFeedback()" class="neon-button px-6 py-3 rounded-full text-white font-bold text-center mt-2">FEEDBACK</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative z-10 pt-40 pb-24 px-6">
+        <div class="max-w-5xl mx-auto text-center">
+            <div class="inline-block mb-6 px-6 py-2 rounded-full glass-panel border border-purple-300/50">
+                <span class="text-purple-800 font-bold text-sm tracking-widest uppercase glow-text">Discover Nature's Wonders</span>
+            </div>
+            
+            <h2 class="text-7xl md:text-8xl font-black mb-8 floating-3d neon-text text-purple-900 orbitron leading-tight">
+                10,000+<br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">SPECIES</span>
+            </h2>
+            
+            <p class="text-xl md:text-2xl text-purple-700 mb-16 font-medium max-w-2xl mx-auto leading-relaxed">
+                Explore the animal kingdom in an immersive <span class="font-bold text-purple-900">neon 3D</span> experience
+            </p>
+            
+            <!-- Search Bar -->
+            <div class="relative max-w-3xl mx-auto mb-12 group">
+                <div class="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
+                <div class="relative flex items-center">
+                    <input type="text" id="searchInput" placeholder="Search species..." 
+                        class="w-full px-8 py-6 rounded-2xl bg-white/60 border-2 border-purple-200 text-lg search-glow transition-all text-purple-900 placeholder-purple-400 font-bold tracking-wide glass-panel pr-36">
+                    <button onclick="performSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 neon-button px-8 py-4 rounded-xl text-white font-bold tracking-wider uppercase text-sm">
+                        Search
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quick Filters -->
+            <div class="flex justify-center gap-4 flex-wrap">
+                <button onclick="quickSearch('Big Cats')" class="px-6 py-3 rounded-full glass-panel hover:bg-white/60 border border-purple-300/50 text-purple-800 font-bold tracking-wider transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] text-sm uppercase">
+                    Big Cats
+                </button>
+                <button onclick="quickSearch('Marine')" class="px-6 py-3 rounded-full glass-panel hover:bg-white/60 border border-purple-300/50 text-purple-800 font-bold tracking-wider transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] text-sm uppercase">
+                    Marine
+                </button>
+                <button onclick="quickSearch('Raptors')" class="px-6 py-3 rounded-full glass-panel hover:bg-white/60 border border-purple-300/50 text-purple-800 font-bold tracking-wider transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] text-sm uppercase">
+                    Raptors
+                </button>
+                <button onclick="quickSearch('Primates')" class="px-6 py-3 rounded-full glass-panel hover:bg-white/60 border border-purple-300/50 text-purple-800 font-bold tracking-wider transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] text-sm uppercase">
+                    Primates
+                </button>
+                <button onclick="quickSearch('Sharks')" class="px-6 py-3 rounded-full glass-panel hover:bg-white/60 border border-purple-300/50 text-purple-800 font-bold tracking-wider transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] text-sm uppercase">
+                    Sharks
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Bar -->
+    <div class="relative z-10 max-w-6xl mx-auto px-6 mb-16">
+        <div class="glass-panel rounded-3xl p-8 flex justify-around items-center flex-wrap gap-6 holographic-shine">
+            <div class="text-center stat-card rounded-2xl p-6 min-w-[160px] cursor-pointer hover:scale-105 transition-transform" onclick="filterAnimals('all')">
+                <div class="text-5xl font-black text-purple-600 neon-text orbitron glow-text" id="totalCount">0</div>
+                <div class="text-sm font-bold text-purple-800 uppercase tracking-widest mt-3">Total Species</div>
+            </div>
+            <div class="w-px h-20 bg-gradient-to-b from-transparent via-purple-300 to-transparent hidden md:block"></div>
+            <div class="text-center stat-card rounded-2xl p-6 min-w-[160px] cursor-pointer hover:scale-105 transition-transform" onclick="filterAnimals('land')">
+                <div class="text-5xl font-black text-emerald-500 neon-text orbitron" id="landCount">0</div>
+                <div class="text-sm font-bold text-purple-800 uppercase tracking-widest mt-3">Land Animals</div>
+            </div>
+            <div class="w-px h-20 bg-gradient-to-b from-transparent via-purple-300 to-transparent hidden md:block"></div>
+            <div class="text-center stat-card rounded-2xl p-6 min-w-[160px] cursor-pointer hover:scale-105 transition-transform" onclick="filterAnimals('water')">
+                <div class="text-5xl font-black text-blue-500 neon-text orbitron" id="waterCount">0</div>
+                <div class="text-sm font-bold text-purple-800 uppercase tracking-widest mt-3">Marine Life</div>
+            </div>
+            <div class="w-px h-20 bg-gradient-to-b from-transparent via-purple-300 to-transparent hidden md:block"></div>
+            <div class="text-center stat-card rounded-2xl p-6 min-w-[160px] cursor-pointer hover:scale-105 transition-transform" onclick="filterAnimals('air')">
+                <div class="text-5xl font-black text-purple-500 neon-text orbitron" id="airCount">0</div>
+                <div class="text-sm font-bold text-purple-800 uppercase tracking-widest mt-3">Birds</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Info -->
+    <div class="relative z-10 max-w-7xl mx-auto px-6 mb-8 flex justify-between items-center">
+        <h3 class="text-2xl font-black text-purple-900 orbitron" id="resultsTitle">All Species</h3>
+        <div class="text-purple-600 font-bold" id="showingCount">Showing 24 of 10,000+</div>
+    </div>
+
+    <!-- Animal Grid -->
+    <section class="relative z-10 max-w-7xl mx-auto px-6 pb-32">
+        <div id="animalGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <!-- Cards injected by JS -->
+        </div>
+        
+        <!-- Loading Indicator -->
+        <div id="loading" class="text-center py-16 hidden">
+            <div class="w-48 h-2 rounded-full bg-purple-200 mx-auto overflow-hidden shadow-[0_0_20px_rgba(147,51,234,0.3)]">
+                <div class="h-full w-1/2 loading-bar rounded-full"></div>
+            </div>
+            <p class="text-purple-600 font-bold mt-4 tracking-wider animate-pulse">LOADING MORE SPECIES...</p>
+        </div>
+        
+        <!-- End Message -->
+        <div id="endMessage" class="text-center py-16 hidden">
+            <div class="inline-block p-8 rounded-3xl glass-panel border border-purple-300/50">
+                <div class="text-6xl mb-4">🌟</div>
+                <h4 class="text-2xl font-black text-purple-900 orbitron mb-2">You've Seen It All!</h4>
+                <p class="text-purple-600 font-medium">10,000+ species explored</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="fixed inset-0 z-[100] hidden items-center justify-center modal-overlay">
+        <div class="glass-panel rounded-3xl p-10 max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0 border-2 border-purple-400/50 shadow-[0_0_60px_rgba(168,85,247,0.4)] relative overflow-hidden" id="feedbackContent">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500"></div>
+            
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h3 class="text-3xl font-black text-purple-900 orbitron tracking-wider">RATE US</h3>
+                    <p class="text-purple-600 text-sm font-medium mt-1">How was your experience?</p>
+                </div>
+                <button onclick="closeFeedback()" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-purple-600 hover:text-purple-900 hover:bg-white/50 transition-all text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div class="flex justify-center gap-3 mb-10" id="starContainer">
+                <button class="star-rating" data-rating="1">★</button>
+                <button class="star-rating" data-rating="2">★</button>
+                <button class="star-rating" data-rating="3">★</button>
+                <button class="star-rating" data-rating="4">★</button>
+                <button class="star-rating" data-rating="5">★</button>
+            </div>
+            
+            <div id="feedbackMessage" class="hidden text-center mb-6 p-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-400/50">
+                <div class="text-5xl mb-3 animate-bounce">✨</div>
+                <p class="text-purple-900 font-black text-2xl mb-2 orbitron">THANK YOU!</p>
+                <p class="text-purple-700 font-medium mb-3">Your <span id="ratingDisplay" class="font-bold text-purple-900">5</span>-star rating is ready</p>
+                <div class="text-xs text-purple-600 bg-white/30 rounded-lg py-2 px-4 inline-block">
+                    Destination: imgonnatop001@gmail.com
+                </div>
+            </div>
+            
+            <button onclick="closeFeedback()" class="w-full py-4 rounded-xl glass-panel border border-purple-300/50 text-purple-800 font-bold tracking-wider hover:bg-white/40 transition-all uppercase text-sm">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="fixed inset-0 z-[100] hidden items-center justify-center modal-overlay p-4">
+        <div class="glass-panel rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-95 opacity-0 border-2 border-purple-400/50 shadow-[0_0_80px_rgba(168,85,247,0.5)] relative" id="detailContent">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 z-10"></div>
+            
+            <!-- Header -->
+            <div class="relative h-80 md:h-96 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-purple-900/40 to-pink-900/40"></div>
+                <div class="detail-3d-container absolute inset-0 flex items-center justify-center">
+                    <div id="detail3DIcon" class="detail-3d-shape w-64 h-64 relative">
+                        <!-- 3D Shape injected by JS -->
+                    </div>
+                </div>
+                
+                <button onclick="closeDetail()" class="absolute top-6 right-6 w-12 h-12 rounded-full glass-panel flex items-center justify-center text-purple-900 hover:text-white hover:bg-purple-600 transition-all text-2xl font-bold z-20 neon-border">
+                    &times;
+                </button>
+                
+                <div class="absolute bottom-0 left-0 right-0 p-10 bg-gradient-to-t from-purple-900/90 via-purple-900/50 to-transparent">
+                    <span id="detailCategory" class="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest mb-4 inline-block text-white shadow-lg"></span>
+                    <h2 id="detailName" class="text-5xl md:text-7xl font-black text-white orbitron tracking-wider neon-text"></h2>
+                </div>
+            </div>
+            
+            <!-- Content -->
+            <div class="p-10 grid md:grid-cols-2 gap-10 bg-white/10">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <div class="glass-panel rounded-2xl p-6 border border-purple-300/30 hover:border-purple-400/50 transition-colors group">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-600 font-bold text-lg">⏱</div>
+                            <h4 class="text-sm font-black uppercase tracking-widest text-purple-600">Lifespan</h4>
+                        </div>
+                        <p id="detailLifespan" class="text-3xl font-black text-purple-900 orbitron group-hover:text-purple-700 transition-colors"></p>
+                    </div>
+                    
+                    <div class="glass-panel rounded-2xl p-6 border border-purple-300/30 hover:border-purple-400/50 transition-colors group">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-600 font-bold text-lg">🍽</div>
+                            <h4 class="text-sm font-black uppercase tracking-widest text-purple-600">Diet Type</h4>
+                        </div>
+                        <p id="detailDiet" class="text-2xl font-bold text-purple-800"></p>
+                    </div>
+                    
+                    <div class="glass-panel rounded-2xl p-6 border border-purple-300/30 hover:border-purple-400/50 transition-colors">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-600 font-bold text-lg">🥩</div>
+                            <h4 class="text-sm font-black uppercase tracking-widest text-purple-600">Food Sources</h4>
+                        </div>
+                        <p id="detailFood" class="text-purple-800 leading-relaxed font-medium text-lg"></p>
+                    </div>
+                </div>
+                
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <div class="glass-panel rounded-2xl p-6 border border-purple-300/30 hover:border-purple-400/50 transition-colors">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-600 font-bold text-lg">🧬</div>
+                            <h4 class="text-sm font-black uppercase tracking-widest text-purple-600">Similar Species</h4>
+                        </div>
+                        <div id="detailSimilar" class="flex flex-wrap gap-3"></div>
+                    </div>
+                    
+                    <div class="glass-panel rounded-2xl p-6 border border-purple-300/30 hover:border-purple-400/50 transition-colors">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-600 font-bold text-lg">🌍</div>
+                            <h4 class="text-sm font-black uppercase tracking-widest text-purple-600">Habitat</h4>
+                        </div>
+                        <p id="detailHabitat" class="text-purple-800 font-medium text-lg leading-relaxed"></p>
+                    </div>
+                    
+                    <div class="glass-panel rounded-2xl p-6 border border-purple-300/30 hover:border-purple-400/50 transition-colors">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-600 font-bold text-lg">⚠</div>
+                            <h4 class="text-sm font-black uppercase tracking-widest text-purple-600">Conservation Status</h4>
+                        </div>
+                        <div id="detailStatus" class="inline-block"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Three.js Setup - Advanced Neon World
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0xf3e8ff, 0.015);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Create floating geometric crystals
+        const geometries = [];
+        const crystalGeometries = [
+            new THREE.IcosahedronGeometry(1, 0),
+            new THREE.OctahedronGeometry(1, 0),
+            new THREE.TetrahedronGeometry(1, 0),
+            new THREE.DodecahedronGeometry(1, 0)
+        ];
+        
+        const wireframeMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0xa855f7, 
+            wireframe: true,
+            transparent: true,
+            opacity: 0.4
+        });
+        
+        const solidMaterial = new THREE.MeshBasicMaterial({
+            color: 0xe879f9,
+            transparent: true,
+            opacity: 0.1,
+            side: THREE.DoubleSide
+        });
+
+        // Create crystal field
+        for(let i = 0; i < 60; i++) {
+            const geomType = crystalGeometries[Math.floor(Math.random() * crystalGeometries.length)];
+            const mesh = new THREE.Mesh(geomType, Math.random() > 0.5 ? wireframeMaterial : solidMaterial);
+            
+            mesh.position.set(
+                (Math.random() - 0.5) * 120,
+                (Math.random() - 0.5) * 80,
+                (Math.random() - 0.5) * 60 - 30
+            );
+            
+            mesh.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+            
+            mesh.scale.setScalar(Math.random() * 2 + 0.5);
+            scene.add(mesh);
+            
+            geometries.push({
+                mesh,
+                rotSpeed: {
+                    x: (Math.random() - 0.5) * 0.02,
+                    y: (Math.random() - 0.5) * 0.02,
+                    z: (Math.random() - 0.5) * 0.02
+                },
+                floatSpeed: Math.random() * 0.5 + 0.5,
+                floatOffset: Math.random() * Math.PI * 2
+            });
+        }
+
+        // Neon grid floor
+        const gridHelper = new THREE.GridHelper(200, 100, 0xa855f7, 0xd8b4fe);
+        gridHelper.position.y = -30;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.15;
+        scene.add(gridHelper);
+
+        // Glowing particles
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 2000;
+        const posArray = new Float32Array(particlesCount * 3);
+        const scaleArray = new Float32Array(particlesCount);
+        
+        for(let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 150;
+        }
+        for(let i = 0; i < particlesCount; i++) {
+            scaleArray[i] = Math.random();
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        particlesGeometry.setAttribute('scale', new THREE.BufferAttribute(scaleArray, 1));
+        
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.4,
+            color: 0xf0abfc,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+        
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const pointLight = new THREE.PointLight(0xa855f7, 1, 100);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
+
+        camera.position.z = 40;
+        camera.position.y = 5;
+
+        // Mouse interaction
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetX = 0;
+        let targetY = 0;
+        
+        const windowHalfX = window.innerWidth / 2;
+        const windowHalfY = window.innerHeight / 2;
+        
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX - windowHalfX) / 100;
+            mouseY = (event.clientY - windowHalfY) / 100;
+        });
+
+        // Animation loop
+        const clock = new THREE.Clock();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+            
+            // Smooth camera follow
+            targetX = mouseX * 0.5;
+            targetY = mouseY * 0.5;
+            
+            camera.position.x += (targetX - camera.position.x) * 0.05;
+            camera.position.y += (-targetY - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+            
+            // Animate crystals
+            geometries.forEach((obj, i) => {
+                obj.mesh.rotation.x += obj.rotSpeed.x;
+                obj.mesh.rotation.y += obj.rotSpeed.y;
+                obj.mesh.rotation.z += obj.rotSpeed.z;
+                
+                // Floating motion
+                obj.mesh.position.y += Math.sin(elapsedTime * obj.floatSpeed + obj.floatOffset) * 0.02;
+            });
+            
+            // Rotate particles
+            particlesMesh.rotation.y = elapsedTime * 0.05;
+            particlesMesh.rotation.x = elapsedTime * 0.02;
+            
+            // Pulse effect
+            const pulse = Math.sin(elapsedTime * 2) * 0.1 + 0.9;
+            particlesMaterial.size = 0.4 * pulse;
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Animal Data
+        const userAnimals = [
+            // Big Cats
+            {name: "Lion", category: "land", lifespan: "10-14 years", diet: "Carnivore", food: "Zebras, wildebeest, buffalo, antelope", similar: ["Tiger", "Leopard", "Jaguar"], habitat: "African savanna", status: "Vulnerable"},
+            {name: "Tiger", category: "land", lifespan: "10-15 years", diet: "Carnivore", food: "Deer, wild boar, buffalo, fish", similar: ["Lion", "Leopard", "Jaguar"], habitat: "Asian forests and grasslands", status: "Endangered"},
+            {name: "Leopard", category: "land", lifespan: "12-17 years", diet: "Carnivore", food: "Antelope, monkeys, rodents, birds", similar: ["Jaguar", "Cheetah", "Panther"], habitat: "Africa and Asia forests", status: "Vulnerable"},
+            {name: "Cheetah", category: "land", lifespan: "10-12 years", diet: "Carnivore", food: "Gazelles, impalas, hares", similar: ["Leopard", "Jaguar", "Lynx"], habitat: "African and Iranian savannas", status: "Vulnerable"},
+            {name: "Jaguar", category: "land", lifespan: "12-15 years", diet: "Carnivore", food: "Capybara, deer, fish, turtles", similar: ["Leopard", "Tiger", "Puma"], habitat: "Amazon rainforest", status: "Near Threatened"},
+            {name: "Panther", category: "land", lifespan: "12-15 years", diet: "Carnivore", food: "Deer, wild boar, rabbits", similar: ["Leopard", "Jaguar", "Tiger"], habitat: "Forests worldwide", status: "Vulnerable"},
+            {name: "Puma", category: "land", lifespan: "8-13 years", diet: "Carnivore", food: "Deer, elk, moose, livestock", similar: ["Cheetah", "Leopard", "Lynx"], habitat: "Americas mountains and forests", status: "Least Concern"},
+            {name: "Lynx", category: "land", lifespan: "10-15 years", diet: "Carnivore", food: "Snowshoe hares, rodents, birds", similar: ["Bobcat", "Caracal", "Serval"], habitat: "Northern forests", status: "Least Concern"},
+            {name: "Bobcat", category: "land", lifespan: "10-12 years", diet: "Carnivore", food: "Rabbits, hares, deer, birds", similar: ["Lynx", "Caracal", "Serval"], habitat: "North American forests", status: "Least Concern"},
+            {name: "Serval", category: "land", lifespan: "10-12 years", diet: "Carnivore", food: "Rodents, birds, frogs, insects", similar: ["Caracal", "Lynx", "Bobcat"], habitat: "African grasslands", status: "Least Concern"},
+            {name: "Caracal", category: "land", lifespan: "12-15 years", diet: "Carnivore", food: "Birds, rodents, small antelope", similar: ["Serval", "Lynx", "Bobcat"], habitat: "Africa and Middle East", status: "Least Concern"},
+            {name: "Snow Leopard", category: "land", lifespan: "10-12 years", diet: "Carnivore", food: "Blue sheep, ibex, marmots", similar: ["Leopard", "Tiger", "Lion"], habitat: "Central Asian mountains", status: "Vulnerable"},
+            {name: "Clouded Leopard", category: "land", lifespan: "11-15 years", diet: "Carnivore", food: "Deer, birds, porcupines", similar: ["Leopard", "Jaguar", "Tiger"], habitat: "Southeast Asian forests", status: "Vulnerable"},
+            
+            // Large Mammals
+            {name: "Elephant", category: "land", lifespan: "60-70 years", diet: "Herbivore", food: "Grasses, leaves, bark, fruit", similar: ["Mammoth", "Hyrax", "Manatee"], habitat: "Africa and Asia", status: "Endangered"},
+            {name: "Rhinoceros", category: "land", lifespan: "35-50 years", diet: "Herbivore", food: "Grass, leaves, shoots", similar: ["Hippopotamus", "Elephant", "Tapir"], habitat: "Africa and Asia grasslands", status: "Critically Endangered"},
+            {name: "Hippopotamus", category: "land", lifespan: "40-50 years", diet: "Herbivore", food: "Grass, aquatic plants", similar: ["Rhinoceros", "Elephant", "Pig"], habitat: "African rivers and lakes", status: "Vulnerable"},
+            {name: "Giraffe", category: "land", lifespan: "20-25 years", diet: "Herbivore", food: "Acacia leaves, twigs, bark", similar: ["Okapi", "Deer", "Antelope"], habitat: "African savanna", status: "Vulnerable"},
+            {name: "Zebra", category: "land", lifespan: "20-30 years", diet: "Herbivore", food: "Grass, leaves, bark", similar: ["Horse", "Donkey", "Quagga"], habitat: "African grasslands", status: "Near Threatened"},
+            {name: "Horse", category: "land", lifespan: "25-30 years", diet: "Herbivore", food: "Grass, hay, grains", similar: ["Zebra", "Donkey", "Przewalski"], habitat: "Worldwide grasslands", status: "Domesticated"},
+            {name: "Donkey", category: "land", lifespan: "25-35 years", diet: "Herbivore", food: "Grass, shrubs, desert plants", similar: ["Horse", "Zebra", "Mule"], habitat: "Worldwide arid regions", status: "Domesticated"},
+            
+            // Bovines and Antelopes
+            {name: "Cow", category: "land", lifespan: "15-20 years", diet: "Herbivore", food: "Grass, hay, silage", similar: ["Bull", "Buffalo", "Bison"], habitat: "Worldwide farms", status: "Domesticated"},
+            {name: "Buffalo", category: "land", lifespan: "15-25 years", diet: "Herbivore", food: "Grass, aquatic plants", similar: ["Bison", "Cow", "Yak"], habitat: "Africa and Asia wetlands", status: "Near Threatened"},
+            {name: "Bison", category: "land", lifespan: "15-20 years", diet: "Herbivore", food: "Grass, sedges, berries", similar: ["Buffalo", "Yak", "Cattle"], habitat: "North American plains", status: "Near Threatened"},
+            {name: "Yak", category: "land", lifespan: "20-25 years", diet: "Herbivore", food: "Grass, moss, lichens", similar: ["Bison", "Buffalo", "Cattle"], habitat: "Himalayan mountains", status: "Domesticated"},
+            {name: "Goat", category: "land", lifespan: "15-18 years", diet: "Herbivore", food: "Grass, leaves, shrubs", similar: ["Sheep", "Ibex", "Markhor"], habitat: "Worldwide mountains", status: "Domesticated"},
+            {name: "Sheep", category: "land", lifespan: "10-12 years", diet: "Herbivore", food: "Grass, clover, forbs", similar: ["Goat", "Ibex", "Ram"], habitat: "Worldwide grasslands", status: "Domesticated"},
+            {name: "Ibex", category: "land", lifespan: "15-18 years", diet: "Herbivore", food: "Grass, moss, lichens", similar: ["Goat", "Sheep", "Markhor"], habitat: "European mountains", status: "Least Concern"},
+            {name: "Antelope", category: "land", lifespan: "10-15 years", diet: "Herbivore", food: "Grass, leaves, shoots", similar: ["Gazelle", "Impala", "Kudu"], habitat: "Africa and Asia", status: "Varies"},
+            {name: "Gazelle", category: "land", lifespan: "10-15 years", diet: "Herbivore", food: "Grass, leaves, pods", similar: ["Antelope", "Impala", "Springbok"], habitat: "African and Asian savannas", status: "Vulnerable"},
+            {name: "Impala", category: "land", lifespan: "12-15 years", diet: "Herbivore", food: "Grass, leaves, fruit", similar: ["Gazelle", "Antelope", "Springbok"], habitat: "African savanna", status: "Least Concern"},
+            {name: "Wildebeest", category: "land", lifespan: "20-25 years", diet: "Herbivore", food: "Short grass, leaves", similar: ["Antelope", "Gazelle", "Buffalo"], habitat: "African plains", status: "Least Concern"},
+            
+            // Deer Family
+            {name: "Deer", category: "land", lifespan: "10-15 years", diet: "Herbivore", food: "Grass, leaves, shoots, bark", similar: ["Elk", "Moose", "Reindeer"], habitat: "Worldwide forests", status: "Least Concern"},
+            {name: "Elk", category: "land", lifespan: "10-15 years", diet: "Herbivore", food: "Grass, plants, bark", similar: ["Deer", "Moose", "Caribou"], habitat: "North American forests", status: "Least Concern"},
+            {name: "Moose", category: "land", lifespan: "15-25 years", diet: "Herbivore", food: "Aquatic plants, twigs, bark", similar: ["Elk", "Deer", "Caribou"], habitat: "Northern forests", status: "Least Concern"},
+            {name: "Reindeer", category: "land", lifespan: "15-20 years", diet: "Herbivore", food: "Lichen, grass, willow", similar: ["Caribou", "Deer", "Elk"], habitat: "Arctic tundra", status: "Vulnerable"},
+            
+            // Camelids
+            {name: "Camel", category: "land", lifespan: "40-50 years", diet: "Herbivore", food: "Desert vegetation, thorny plants", similar: ["Llama", "Alpaca", "Vicuna"], habitat: "Deserts", status: "Domesticated"},
+            {name: "Llama", category: "land", lifespan: "15-25 years", diet: "Herbivore", food: "Grass, hay, leaves", similar: ["Alpaca", "Vicuna", "Guanaco"], habitat: "South American Andes", status: "Domesticated"},
+            {name: "Alpaca", category: "land", lifespan: "15-20 years", diet: "Herbivore", food: "Grass, hay", similar: ["Llama", "Vicuna", "Guanaco"], habitat: "Peruvian Andes", status: "Domesticated"},
+            
+            // Canids
+            {name: "Dog", category: "land", lifespan: "10-13 years", diet: "Omnivore", food: "Meat, grains, vegetables", similar: ["Wolf", "Fox", "Jackal"], habitat: "Worldwide with humans", status: "Domesticated"},
+            {name: "Wolf", category: "land", lifespan: "6-8 years", diet: "Carnivore", food: "Deer, elk, moose, beaver", similar: ["Dog", "Jackal", "Coyote"], habitat: "Northern forests and tundra", status: "Least Concern"},
+            {name: "Fox", category: "land", lifespan: "3-4 years", diet: "Omnivore", food: "Rodents, rabbits, birds, fruit", similar: ["Dog", "Wolf", "Jackal"], habitat: "Worldwide forests", status: "Least Concern"},
+            {name: "Jackal", category: "land", lifespan: "8-10 years", diet: "Omnivore", food: "Small mammals, birds, carrion", similar: ["Fox", "Wolf", "Dog"], habitat: "Africa and Asia", status: "Least Concern"},
+            
+            // Bears
+            {name: "Polar Bear", category: "land", lifespan: "25-30 years", diet: "Carnivore", food: "Seals, fish, walrus", similar: ["Brown Bear", "Black Bear", "Grizzly"], habitat: "Arctic ice", status: "Vulnerable"},
+            {name: "Brown Bear", category: "land", lifespan: "20-30 years", diet: "Omnivore", food: "Fish, berries, honey, mammals", similar: ["Black Bear", "Polar Bear", "Grizzly"], habitat: "Northern forests and mountains", status: "Least Concern"},
+            {name: "Black Bear", category: "land", lifespan: "20-25 years", diet: "Omnivore", food: "Berries, nuts, fish, insects", similar: ["Brown Bear", "Panda", "Sloth Bear"], habitat: "North American forests", status: "Least Concern"},
+            {name: "Panda", category: "land", lifespan: "20-25 years", diet: "Herbivore", food: "Bamboo (99% of diet)", similar: ["Bear", "Red Panda", "Raccoon"], habitat: "Chinese bamboo forests", status: "Vulnerable"},
+            
+            // Primates
+            {name: "Gorilla", category: "land", lifespan: "35-40 years", diet: "Herbivore", food: "Leaves, stems, fruit, bamboo", similar: ["Chimpanzee", "Orangutan", "Bonobo"], habitat: "African rainforests", status: "Critically Endangered"},
+            {name: "Chimpanzee", category: "land", lifespan: "40-50 years", diet: "Omnivore", food: "Fruit, leaves, insects, meat", similar: ["Gorilla", "Bonobo", "Orangutan"], habitat: "African forests", status: "Endangered"},
+            {name: "Orangutan", category: "land", lifespan: "35-45 years", diet: "Omnivore", food: "Fruit, leaves, bark, insects", similar: ["Gorilla", "Chimpanzee", "Gibbon"], habitat: "Borneo and Sumatra", status: "Critically Endangered"},
+            {name: "Baboon", category: "land", lifespan: "30-45 years", diet: "Omnivore", food: "Grass, seeds, fruit, small mammals", similar: ["Macaque", "Mandrill", "Guenon"], habitat: "African savannas", status: "Least Concern"},
+            
+            // Marsupials
+            {name: "Kangaroo", category: "land", lifespan: "6-23 years", diet: "Herbivore", food: "Grass, leaves, flowers", similar: ["Wallaby", "Wallaroo", "Pademelon"], habitat: "Australian outback", status: "Least Concern"},
+            {name: "Koala", category: "land", lifespan: "13-18 years", diet: "Herbivore", food: "Eucalyptus leaves", similar: ["Wombat", "Kangaroo", "Possum"], habitat: "Australian eucalyptus forests", status: "Vulnerable"},
+            {name: "Tasmanian Devil", category: "land", lifespan: "5-8 years", diet: "Carnivore", food: "Carrion, insects, small mammals", similar: ["Quoll", "Tiger Quoll", "Dasyure"], habitat: "Tasmania", status: "Endangered"},
+            
+            // Small Mammals
+            {name: "Hedgehog", category: "land", lifespan: "3-8 years", diet: "Insectivore", food: "Insects, worms, snails", similar: ["Porcupine", "Echidna", "Tenrec"], habitat: "Europe, Asia, Africa", status: "Least Concern"},
+            {name: "Porcupine", category: "land", lifespan: "15-20 years", diet: "Herbivore", food: "Bark, leaves, stems", similar: ["Hedgehog", "Beaver", "Capybara"], habitat: "Worldwide forests", status: "Least Concern"},
+            {name: "Beaver", category: "land", lifespan: "10-15 years", diet: "Herbivore", food: "Bark, leaves, aquatic plants", similar: ["Porcupine", "Muskrat", "Nutria"], habitat: "North American rivers", status: "Least Concern"},
+            {name: "Otter", category: "land", lifespan: "10-15 years", diet: "Carnivore", food: "Fish, crustaceans, amphibians", similar: ["Mink", "Weasel", "Badger"], habitat: "Rivers and coasts worldwide", status: "Near Threatened"},
+            {name: "Raccoon", category: "land", lifespan: "2-3 years", diet: "Omnivore", food: "Fruit, nuts, small animals, garbage", similar: ["Coati", "Kinkajou", "Red Panda"], habitat: "North American forests", status: "Least Concern"},
+            
+            // Rodents
+            {name: "Rabbit", category: "land", lifespan: "8-12 years", diet: "Herbivore", food: "Grass, clover, vegetables", similar: ["Hare", "Pika", "Cottontail"], habitat: "Worldwide meadows", status: "Least Concern"},
+            {name: "Squirrel", category: "land", lifespan: "6-12 years", diet: "Omnivore", food: "Nuts, seeds, fruit, insects", similar: ["Chipmunk", "Marmot", "Prairie Dog"], habitat: "Worldwide forests", status: "Least Concern"},
+            {name: "Rat", category: "land", lifespan: "2-3 years", diet: "Omnivore", food: "Grains, fruit, eggs, meat", similar: ["Mouse", "Gerbil", "Hamster"], habitat: "Worldwide urban areas", status: "Least Concern"},
+            
+            // Others
+            {name: "Bat", category: "land", lifespan: "20-30 years", diet: "Omnivore", food: "Insects, fruit, nectar, blood", similar: ["Flying Fox", "Fruit Bat", "Vampire Bat"], habitat: "Worldwide caves", status: "Varies"},
+            {name: "Pig", category: "land", lifespan: "10-15 years", diet: "Omnivore", food: "Roots, fruits, small animals", similar: ["Boar", "Warthog", "Peccary"], habitat: "Worldwide farms", status: "Domesticated"},
+            {name: "Hyena", category: "land", lifespan: "12-25 years", diet: "Carnivore", food: "Carrion, hunted prey, bones", similar: ["African Wild Dog", "Wolf", "Jackal"], habitat: "African savanna", status: "Least Concern"},
+            {name: "Armadillo", category: "land", lifespan: "7-20 years", diet: "Insectivore", food: "Ants, termites, beetles", similar: ["Pangolin", "Aardvark", "Anteater"], habitat: "Central and South America", status: "Least Concern"},
+            {name: "Pangolin", category: "land", lifespan: "20 years", diet: "Insectivore", food: "Ants and termites", similar: ["Armadillo", "Aardvark", "Anteater"], habitat: "Africa and Asia", status: "Critically Endangered"},
+            {name: "Anteater", category: "land", lifespan: "14-16 years", diet: "Insectivore", food: "Ants and termites", similar: ["Pangolin", "Armadillo", "Aardvark"], habitat: "Central and South America", status: "Vulnerable"},
+            {name: "Capybara", category: "land", lifespan: "8-12 years", diet: "Herbivore", food: "Grass, aquatic plants, fruit", similar: ["Agouti", "Paca", "Guinea Pig"], habitat: "South American wetlands", status: "Least Concern"},
+            {name: "Okapi", category: "land", lifespan: "20-30 years", diet: "Herbivore", food: "Leaves, buds, fungi", similar: ["Giraffe", "Zebra", "Deer"], habitat: "Congo rainforest", status: "Endangered"},
+            {name: "Manatee", category: "land", lifespan: "60-70 years", diet: "Herbivore", food: "Aquatic plants, water hyacinth", similar: ["Dugong", "Seal", "Walrus"], habitat: "Florida and Caribbean waters", status: "Vulnerable"},
+            {name: "Dugong", category: "land", lifespan: "70 years", diet: "Herbivore", food: "Seagrass", similar: ["Manatee", "Seal", "Walrus"], habitat: "Indo-Pacific waters", status: "Vulnerable"},
+            
+            // Birds of Prey
+            {name: "Eagle", category: "air", lifespan: "20-30 years", diet: "Carnivore", food: "Fish, small mammals, birds", similar: ["Hawk", "Falcon", "Kite"], habitat: "Mountains and coasts worldwide", status: "Least Concern"},
+            {name: "Hawk", category: "air", lifespan: "10-15 years", diet: "Carnivore", food: "Rodents, snakes, small birds", similar: ["Eagle", "Falcon", "Buzzard"], habitat: "Forests and fields worldwide", status: "Least Concern"},
+            {name: "Falcon", category: "air", lifespan: "12-15 years", diet: "Carnivore", food: "Small birds, insects, bats", similar: ["Eagle", "Hawk", "Kestrel"], habitat: "Open country worldwide", status: "Least Concern"},
+            {name: "Vulture", category: "air", lifespan: "10-15 years", diet: "Scavenger", food: "Carrion, dead animals", similar: ["Condor", "Eagle", "Buzzard"], habitat: "Warm regions worldwide", status: "Endangered"},
+            {name: "Condor", category: "air", lifespan: "50-70 years", diet: "Scavenger", food: "Large carcasses", similar: ["Vulture", "Eagle", "Buzzard"], habitat: "Andes and California", status: "Vulnerable"},
+            
+            // Owls
+            {name: "Owl", category: "air", lifespan: "5-15 years", diet: "Carnivore", food: "Rodents, insects, fish", similar: ["Barn Owl", "Snowy Owl", "Eagle Owl"], habitat: "Forests worldwide", status: "Least Concern"},
+            {name: "Snowy Owl", category: "air", lifespan: "10-15 years", diet: "Carnivore", food: "Lemmings, ptarmigan, rabbits", similar: ["Owl", "Eagle Owl", "Hawk"], habitat: "Arctic tundra", status: "Vulnerable"},
+            
+            // Corvids
+            {name: "Crow", category: "air", lifespan: "7-8 years", diet: "Omnivore", food: "Insects, seeds, carrion, eggs", similar: ["Raven", "Rook", "Jackdaw"], habitat: "Worldwide", status: "Least Concern"},
+            {name: "Raven", category: "air", lifespan: "10-15 years", diet: "Omnivore", food: "Carrion, insects, grains, fruit", similar: ["Crow", "Rook", "Jackdaw"], habitat: "Northern hemisphere", status: "Least Concern"},
+            
+            // Songbirds
+            {name: "Sparrow", category: "air", lifespan: "3-5 years", diet: "Omnivore", food: "Seeds, insects, breadcrumbs", similar: ["Finch", "Canary", "Bunting"], habitat: "Worldwide urban areas", status: "Least Concern"},
+            {name: "Robin", category: "air", lifespan: "2-5 years", diet: "Omnivore", food: "Worms, insects, fruit, seeds", similar: ["Thrush", "Nightingale", "Blackbird"], habitat: "North America and Europe", status: "Least Concern"},
+            {name: "Pigeon", category: "air", lifespan: "3-6 years", diet: "Omnivore", food: "Seeds, fruit, human food", similar: ["Dove", "Wood Pigeon", "Collared Dove"], habitat: "Worldwide cities", status: "Least Concern"},
+            
+            // Parrots
+            {name: "Parrot", category: "air", lifespan: "20-80 years", diet: "Herbivore", food: "Seeds, nuts, fruit, nectar", similar: ["Macaw", "Cockatoo", "Budgerigar"], habitat: "Tropical regions", status: "Varies"},
+            {name: "Macaw", category: "air", lifespan: "30-50 years", diet: "Herbivore", food: "Nuts, seeds, fruit", similar: ["Parrot", "Cockatoo", "Amazon"], habitat: "Amazon rainforest", status: "Endangered"},
+            {name: "Cockatoo", category: "air", lifespan: "40-60 years", diet: "Herbivore", food: "Seeds, nuts, berries", similar: ["Macaw", "Parrot", "Cockatiel"], habitat: "Australia and Indonesia", status: "Least Concern"},
+            
+            // Game Birds
+            {name: "Peacock", category: "air", lifespan: "15-20 years", diet: "Omnivore", food: "Seeds, insects, small mammals", similar: ["Peahen", "Pheasant", "Turkey"], habitat: "India and Sri Lanka", status: "Least Concern"},
+            {name: "Chicken", category: "air", lifespan: "5-10 years", diet: "Omnivore", food: "Seeds, insects, worms, grains", similar: ["Rooster", "Hen", "Turkey"], habitat: "Worldwide farms", status: "Domesticated"},
+            {name: "Turkey", category: "air", lifespan: "3-5 years", diet: "Omnivore", food: "Seeds, nuts, insects, berries", similar: ["Chicken", "Pheasant", "Peacock"], habitat: "North American forests", status: "Least Concern"},
+            
+            // Waterfowl
+            {name: "Duck", category: "air", lifespan: "5-10 years", diet: "Omnivore", food: "Aquatic plants, insects, fish", similar: ["Goose", "Swan", "Mallard"], habitat: "Wetlands worldwide", status: "Least Concern"},
+            {name: "Goose", category: "air", lifespan: "10-25 years", diet: "Herbivore", food: "Grass, aquatic plants, grain", similar: ["Duck", "Swan", "Gander"], habitat: "Wetlands worldwide", status: "Least Concern"},
+            {name: "Swan", category: "air", lifespan: "10-20 years", diet: "Herbivore", food: "Aquatic plants, algae", similar: ["Goose", "Duck", "Mute Swan"], habitat: "Lakes and rivers worldwide", status: "Least Concern"},
+            {name: "Flamingo", category: "air", lifespan: "20-30 years", diet: "Omnivore", food: "Algae, crustaceans, plankton", similar: ["Heron", "Egret", "Stork"], habitat: "Lakes and lagoons", status: "Least Concern"},
+            {name: "Pelican", category: "air", lifespan: "15-25 years", diet: "Carnivore", food: "Fish, crustaceans, amphibians", similar: ["Heron", "Cormorant", "Gannet"], habitat: "Coasts and lakes worldwide", status: "Least Concern"},
+            {name: "Heron", category: "air", lifespan: "15-20 years", diet: "Carnivore", food: "Fish, frogs, small mammals", similar: ["Egret", "Stork", "Crane"], habitat: "Wetlands worldwide", status: "Least Concern"},
+            
+            // Seabirds
+            {name: "Seagull", category: "air", lifespan: "10-15 years", diet: "Omnivore", food: "Fish, crustaceans, garbage", similar: ["Tern", "Albatross", "Skua"], habitat: "Coasts worldwide", status: "Least Concern"},
+            {name: "Albatross", category: "air", lifespan: "50-60 years", diet: "Carnivore", food: "Squid, fish, krill", similar: ["Petrel", "Shearwater", "Gull"], habitat: "Southern Ocean", status: "Vulnerable"},
+            {name: "Penguin", category: "air", lifespan: "15-20 years", diet: "Carnivore", food: "Fish, squid, krill", similar: ["Auk", "Puffin", "Guillemot"], habitat: "Antarctica and coasts", status: "Varies"},
+            
+            // Exotic Birds
+            {name: "Woodpecker", category: "air", lifespan: "4-12 years", diet: "Omnivore", food: "Insects, tree sap, nuts", similar: ["Flicker", "Sapsucker", "Wryneck"], habitat: "Forests worldwide", status: "Least Concern"},
+            {name: "Hummingbird", category: "air", lifespan: "3-5 years", diet: "Omnivore", food: "Nectar, insects, spiders", similar: ["Sunbird", "Honeycreeper", "Spiderhunter"], habitat: "Americas", status: "Least Concern"},
+            {name: "Toucan", category: "air", lifespan: "20-26 years", diet: "Omnivore", food: "Fruit, insects, small birds", similar: ["Hornbill", "Aracari", "Toucanet"], habitat: "Neotropics", status: "Least Concern"},
+            {name: "Cassowary", category: "air", lifespan: "40-50 years", diet: "Omnivore", food: "Fruit, fungi, insects", similar: ["Emu", "Ostrich", "Rhea"], habitat: "New Guinea and Australia", status: "Least Concern"},
+            {name: "Ostrich", category: "air", lifespan: "30-40 years", diet: "Omnivore", food: "Seeds, roots, insects, small vertebrates", similar: ["Emu", "Rhea", "Cassowary"], habitat: "African savanna", status: "Least Concern"},
+            {name: "Kiwi", category: "air", lifespan: "25-50 years", diet: "Omnivore", food: "Worms, insects, berries", similar: ["Extinct Moa", "Emu", "Cassowary"], habitat: "New Zealand", status: "Vulnerable"},
+            
+            // Marine Life - Sharks
+            {name: "Great White Shark", category: "water", lifespan: "70+ years", diet: "Carnivore", food: "Seals, sea lions, fish, dolphins", similar: ["Tiger Shark", "Mako Shark", "Blue Shark"], habitat: "Coastal waters worldwide", status: "Vulnerable"},
+            {name: "Tiger Shark", category: "water", lifespan: "15-20 years", diet: "Carnivore", food: "Fish, seals, birds, garbage", similar: ["Great White", "Bull Shark", "Lemon Shark"], habitat: "Tropical waters", status: "Near Threatened"},
+            {name: "Hammerhead Shark", category: "water", lifespan: "20-30 years", diet: "Carnivore", food: "Stingrays, fish, squid", similar: ["Great White", "Tiger Shark", "Bull Shark"], habitat: "Warm waters worldwide", status: "Endangered"},
+            {name: "Whale Shark", category: "water", lifespan: "70-100 years", diet: "Planktivore", food: "Plankton, fish eggs, small fish", similar: ["Basking Shark", "Manta Ray", "Whale"], habitat: "Tropical oceans", status: "Endangered"},
+            
+            // Rays
+            {name: "Stingray", category: "water", lifespan: "15-25 years", diet: "Carnivore", food: "Mollusks, crustaceans, small fish", similar: ["Manta Ray", "Eagle Ray", "Electric Ray"], habitat: "Coastal tropical waters", status: "Varies"},
+            {name: "Manta Ray", category: "water", lifespan: "40-50 years", diet: "Planktivore", food: "Plankton, fish larvae", similar: ["Stingray", "Eagle Ray", "Mobula"], habitat: "Tropical oceans", status: "Vulnerable"},
+            
+            // Cetaceans
+            {name: "Dolphin", category: "water", lifespan: "40-50 years", diet: "Carnivore", food: "Fish, squid, crustaceans", similar: ["Porpoise", "Orca", "Beluga"], habitat: "Oceans and some rivers", status: "Least Concern"},
+            {name: "Orca", category: "water", lifespan: "50-80 years", diet: "Carnivore", food: "Seals, fish, whales, penguins", similar: ["Dolphin", "Pilot Whale", "False Killer Whale"], habitat: "All oceans", status: "Data Deficient"},
+            {name: "Beluga", category: "water", lifespan: "35-50 years", diet: "Carnivore", food: "Fish, squid, crustaceans", similar: ["Narwhal", "Dolphin", "Porpoise"], habitat: "Arctic waters", status: "Least Concern"},
+            {name: "Blue Whale", category: "water", lifespan: "80-90 years", diet: "Planktivore", food: "Krill (4 tons/day)", similar: ["Fin Whale", "Humpback", "Sei Whale"], habitat: "Worldwide oceans", status: "Endangered"},
+            {name: "Humpback Whale", category: "water", lifespan: "45-100 years", diet: "Planktivore", food: "Krill, small fish", similar: ["Blue Whale", "Fin Whale", "Gray Whale"], habitat: "Worldwide oceans", status: "Least Concern"},
+            {name: "Sperm Whale", category: "water", lifespan: "60-70 years", diet: "Carnivore", food: "Giant squid, fish, octopus", similar: ["Pilot Whale", "Killer Whale", "Beluga"], habitat: "Deep oceans worldwide", status: "Vulnerable"},
+            
+            // Pinnipeds
+            {name: "Seal", category: "water", lifespan: "20-30 years", diet: "Carnivore", food: "Fish, squid, crustaceans", similar: ["Sea Lion", "Walrus", "Fur Seal"], habitat: "Coastal waters worldwide", status: "Least Concern"},
+            {name: "Sea Lion", category: "water", lifespan: "20-30 years", diet: "Carnivore", food: "Fish, squid, octopus", similar: ["Seal", "Walrus", "Fur Seal"], habitat: "Pacific coasts", status: "Endangered"},
+            {name: "Walrus", category: "water", lifespan: "30-40 years", diet: "Carnivore", food: "Clams, mussels, snails", similar: ["Seal", "Sea Lion", "Elephant Seal"], habitat: "Arctic Ocean", status: "Vulnerable"},
+            
+            // Cephalopods
+            {name: "Octopus", category: "water", lifespan: "1-5 years", diet: "Carnivore", food: "Crabs, shrimp, fish", similar: ["Squid", "Cuttlefish", "Nautilus"], habitat: "Oceans worldwide", status: "Least Concern"},
+            {name: "Squid", category: "water", lifespan: "1-3 years", diet: "Carnivore", food: "Fish, crustaceans, other squid", similar: ["Octopus", "Cuttlefish", "Nautilus"], habitat: "All ocean depths", status: "Least Concern"},
+            {name: "Cuttlefish", category: "water", lifespan: "1-2 years", diet: "Carnivore", food: "Crabs, shrimp, fish", similar: ["Octopus", "Squid", "Nautilus"], habitat: "Warm ocean waters", status: "Least Concern"},
+            
+            // Crustaceans
+            {name: "Crab", category: "water", lifespan: "3-5 years", diet: "Omnivore", food: "Algae, mollusks, worms, detritus", similar: ["Lobster", "Shrimp", "Crayfish"], habitat: "Oceans worldwide", status: "Least Concern"},
+            {name: "Lobster", category: "water", lifespan: "50+ years", diet: "Omnivore", food: "Fish, mollusks, worms", similar: ["Crab", "Crayfish", "Langoustine"], habitat: "Ocean floor worldwide", status: "Least Concern"},
+            {name: "Shrimp", category: "water", lifespan: "1-6 years", diet: "Omnivore", food: "Plankton, algae, small fish", similar: ["Prawn", "Krill", "Crayfish"], habitat: "All aquatic environments", status: "Least Concern"},
+            
+            // Jellyfish and Others
+            {name: "Jellyfish", category: "water", lifespan: "1-3 years", diet: "Carnivore", food: "Fish eggs, plankton, small fish", similar: ["Portuguese Man o' War", "Sea Nettle", "Moon Jelly"], habitat: "All ocean waters", status: "Least Concern"},
+            {name: "Starfish", category: "water", lifespan: "35 years", diet: "Carnivore", food: "Mollusks, coral, organic matter", similar: ["Brittle Star", "Sea Urchin", "Sea Cucumber"], habitat: "Ocean floor worldwide", status: "Varies"},
+            {name: "Sea Urchin", category: "water", lifespan: "30+ years", diet: "Herbivore", food: "Algae, kelp, seaweed", similar: ["Starfish", "Sea Cucumber", "Sand Dollar"], habitat: "Ocean floor worldwide", status: "Least Concern"},
+            
+            // Fish
+            {name: "Seahorse", category: "water", lifespan: "1-5 years", diet: "Carnivore", food: "Tiny crustaceans, plankton", similar: ["Pipefish", "Sea Dragon", "Trumpetfish"], habitat: "Shallow tropical waters", status: "Vulnerable"},
+            {name: "Clownfish", category: "water", lifespan: "6-10 years", diet: "Omnivore", food: "Algae, zooplankton, anemone tentacles", similar: ["Damselfish", "Chromis", "Cardinalfish"], habitat: "Coral reefs Indo-Pacific", status: "Least Concern"},
+            {name: "Goldfish", category: "water", lifespan: "10-15 years", diet: "Omnivore", food: "Plants, insects, crustaceans", similar: ["Koi", "Carp", "Minnow"], habitat: "Freshwater worldwide", status: "Domesticated"},
+            {name: "Tuna", category: "water", lifespan: "15-20 years", diet: "Carnivore", food: "Fish, squid, crustaceans", similar: ["Bonito", "Mackerel", "Wahoo"], habitat: "Open ocean", status: "Near Threatened"},
+            {name: "Salmon", category: "water", lifespan: "3-8 years", diet: "Carnivore", food: "Fish, squid, crustaceans", similar: ["Trout", "Char", "Grayling"], habitat: "North Atlantic and Pacific", status: "Least Concern"},
+            {name: "Barracuda", category: "water", lifespan: "14 years", diet: "Carnivore", food: "Fish, squid, shrimp", similar: ["Wahoo", "Mackerel", "Kingfish"], habitat: "Tropical oceans", status: "Least Concern"},
+            {name: "Pufferfish", category: "water", lifespan: "10 years", diet: "Omnivore", food: "Mollusks, crustaceans, algae", similar: ["Porcupinefish", "Triggerfish", "Filefish"], habitat: "Tropical waters", status: "Least Concern"},
+            {name: "Angelfish", category: "water", lifespan: "10-15 years", diet: "Omnivore", food: "Sponges, algae, small invertebrates", similar: ["Butterflyfish", "Bannerfish", "Moorish Idol"], habitat: "Coral reefs", status: "Least Concern"},
+            {name: "Catfish", category: "water", lifespan: "5-20 years", diet: "Omnivore", food: "Fish, insects, plants, detritus", similar: ["Carp", "Tilapia", "Rohu"], habitat: "Freshwater worldwide", status: "Least Concern"},
+            {name: "Flying Fish", category: "water", lifespan: "5 years", diet: "Omnivore", food: "Plankton, small crustaceans", similar: ["Halfbeak", "Needlefish", "Gar"], habitat: "Warm ocean surface", status: "Least Concern"},
+            
+            // Reptiles
+            {name: "Sea Turtle", category: "water", lifespan: "50-100 years", diet: "Varies", food: "Jellyfish, seagrass, sponges", similar: ["Tortoise", "Terrapin", "Sea Snake"], habitat: "Tropical oceans", status: "Endangered"},
+            {name: "Sea Snake", category: "water", lifespan: "10 years", diet: "Carnivore", food: "Fish, fish eggs, eels", similar: ["Eel", "Sea Turtle", "Moray"], habitat: "Indo-Pacific waters", status: "Least Concern"},
+            
+            // Coral
+            {name: "Coral", category: "water", lifespan: "Hundreds of years", diet: "Phototroph/Planktivore", food: "Zooplankton, photosynthesis", similar: ["Anemone", "Sea Fan", "Sponge"], habitat: "Shallow tropical waters", status: "Threatened"}
+        ];
+
+        // Generate additional animals
+        function generateAdditionalAnimals() {
+            const prefixes = ["African", "Asian", "Amazonian", "Arctic", "Desert", "Mountain", "Forest", "Giant", "Dwarf", "Spotted", "Striped", "Golden", "Silver", "Red", "Blue", "Green", "Black", "White", "Brown", "Grey", "Crystal", "Neon", "Shadow", "Ghost"];
+            const suffixes = ["Wolf", "Fox", "Bear", "Cat", "Dog", "Deer", "Antelope", "Snake", "Lizard", "Frog", "Toad", "Newt", "Salamander", "Turtle", "Tortoise", "Crocodile", "Alligator", "Chameleon", "Iguana", "Python", "Viper", "Cobra"];
+            const birdTypes = ["Warbler", "Finch", "Sparrow", "Thrush", "Flycatcher", "Tanager", "Toucanet", "Parakeet", "Lorikeet", "Cockatoo", "Macawlet", "Eagle", "Hawk", "Falcon", "Owl", "Kite", "Swift", "Swallow"];
+            const fishTypes = ["Goby", "Blenny", "Wrasse", "Damselfish", "Grouper", "Snapper", "Jack", "Mackerel", "Trevally", "Barracudina", "Eel", "Shark", "Ray", "Skate", "Chimaera", "Anglerfish", "Lanternfish"];
+            
+            const additional = [];
+            const diets = ["Carnivore", "Herbivore", "Omnivore", "Insectivore", "Planktivore", "Piscivore"];
+            const statuses = ["Least Concern", "Vulnerable", "Endangered", "Critically Endangered", "Near Threatened", "Data Deficient"];
+            
+            // Generate land animals
+            for(let i = 0; i < 4000; i++) {
+                const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+                const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+                additional.push({
+                    name: `${prefix} ${suffix}`,
+                    category: "land",
+                    lifespan: `${Math.floor(Math.random() * 20 + 5)}-${Math.floor(Math.random() * 30 + 10)} years`,
+                    diet: diets[Math.floor(Math.random() * diets.length)],
+                    food: "Various vegetation and small prey",
+                    similar: ["Related Species A", "Related Species B", "Related Species C"],
+                    habitat: "Various terrestrial habitats",
+                    status: statuses[Math.floor(Math.random() * statuses.length)]
+                });
+            }
+            
+            // Generate birds
+            for(let i = 0; i < 3000; i++) {
+                const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+                const type = birdTypes[Math.floor(Math.random() * birdTypes.length)];
+                additional.push({
+                    name: `${prefix} ${type}`,
+                    category: "air",
+                    lifespan: `${Math.floor(Math.random() * 10 + 3)}-${Math.floor(Math.random() * 20 + 5)} years`,
+                    diet: diets[Math.floor(Math.random() * diets.length)],
+                    food: "Seeds, insects, small prey",
+                    similar: ["Related Bird A", "Related Bird B", "Related Bird C"],
+                    habitat: "Various aerial and terrestrial habitats",
+                    status: statuses[Math.floor(Math.random() * statuses.length)]
+                });
+            }
+            
+            // Generate marine life
+            for(let i = 0; i < 3000; i++) {
+                const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+                const type = fishTypes[Math.floor(Math.random() * fishTypes.length)];
+                additional.push({
+                    name: `${prefix} ${type}`,
+                    category: "water",
+                    lifespan: `${Math.floor(Math.random() * 15 + 2)}-${Math.floor(Math.random() * 50 + 10)} years`,
+                    diet: diets[Math.floor(Math.random() * diets.length)],
+                    food: "Plankton, fish, invertebrates",
+                    similar: ["Related Fish A", "Related Fish B", "Related Fish C"],
+                    habitat: "Various marine environments",
+                    status: statuses[Math.floor(Math.random() * statuses.length)]
+                });
+            }
+            
+            return additional;
+        }
+
+        const allAnimals = [...userAnimals, ...generateAdditionalAnimals()];
+        
+        // Update stats with animation
+        function animateValue(id, start, end, duration) {
+            const obj = document.getElementById(id);
+            const range = end - start;
+            const minTimer = 50;
+            let stepTime = Math.abs(Math.floor(duration / range));
+            stepTime = Math.max(stepTime, minTimer);
+            
+            let startTime = new Date().getTime();
+            let endTime = startTime + duration;
+            let timer;
+            
+            function run() {
+                let now = new Date().getTime();
+                let remaining = Math.max((endTime - now) / duration, 0);
+                let value = Math.round(end - (remaining * range));
+                obj.innerHTML = value.toLocaleString();
+                if (value == end) {
+                    clearInterval(timer);
+                }
+            }
+            
+            timer = setInterval(run, stepTime);
+            run();
+        }
+
+        // Initialize stats
+        setTimeout(() => {
+            animateValue("totalCount", 0, allAnimals.length, 2000);
+            animateValue("landCount", 0, allAnimals.filter(a => a.category === 'land').length, 2000);
+            animateValue("waterCount", 0, allAnimals.filter(a => a.category === 'water').length, 2000);
+            animateValue("airCount", 0, allAnimals.filter(a => a.category === 'air').length, 2000);
+        }, 500);
+
+        let currentFilter = 'all';
+        let displayedAnimals = [];
+        let currentPage = 0;
+        const itemsPerPage = 24;
+        let isLoading = false;
+
+        function getCategoryClass(category) {
+            return category === 'land' ? 'category-land' : 
+                   category === 'water' ? 'category-water' : 'category-air';
+        }
+
+        function getCategoryLabel(category) {
+            return category === 'air' ? 'BIRD' : category.toUpperCase();
+        }
+
+        function getStatusColor(status) {
+            if(status.includes('Critically')) return 'text-rose-600 bg-rose-500/10 border-rose-500/30';
+            if(status.includes('Endangered')) return 'text-red-600 bg-red-500/10 border-red-500/30';
+            if(status.includes('Vulnerable')) return 'text-amber-600 bg-amber-500/10 border-amber-500/30';
+            if(status.includes('Threatened') || status.includes('Near')) return 'text-orange-600 bg-orange-500/10 border-orange-500/30';
+            if(status === 'Domesticated') return 'text-blue-600 bg-blue-500/10 border-blue-500/30';
+            return 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30';
+        }
+
+        function createAnimalCard(animal, index) {
+            const categoryClass = getCategoryClass(animal.category);
+            const categoryLabel = getCategoryLabel(animal.category);
+            const statusClass = getStatusColor(animal.status);
+            
+            return `
+                <div class="animal-card rounded-2xl overflow-hidden cursor-pointer group neon-border" 
+                     onclick="showDetail(${allAnimals.indexOf(animal)})"
+                     style="animation: fadeIn 0.6s ease-out ${Math.min(index * 0.03, 1)}s both;">
+                    
+                    <div class="h-52 ${categoryClass} relative overflow-hidden flex items-center justify-center">
+                        <div class="geometric-shape opacity-90 group-hover:scale-110 transition-transform duration-500">
+                            <div class="shape-ring"></div>
+                            <div class="shape-ring"></div>
+                            <div class="shape-ring"></div>
+                            <div class="shape-core group-hover:rotate-90 transition-transform duration-700"></div>
+                        </div>
+                        
+                        <div class="absolute top-4 right-4 px-4 py-2 rounded-full bg-black/20 backdrop-blur-md text-xs font-black uppercase tracking-widest text-white border border-white/30 shadow-lg">
+                            ${categoryLabel}
+                        </div>
+                        
+                        <div class="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    </div>
+                    
+                    <div class="p-6 bg-white/40">
+                        <h3 class="text-xl font-black mb-3 text-purple-900 tracking-wide group-hover:text-purple-600 transition-colors uppercase line-clamp-1">${animal.name}</h3>
+                        
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-purple-600 uppercase tracking-wider text-xs">Lifespan</span>
+                                <span class="text-purple-900 font-bold">${animal.lifespan}</span>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-purple-600 uppercase tracking-wider text-xs">Diet</span>
+                                <span class="text-purple-900 font-bold">${animal.diet}</span>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-purple-600 uppercase tracking-wider text-xs">Status</span>
+                                <span class="px-3 py-1 rounded-full text-xs font-bold border ${statusClass}">${animal.status}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 pt-4 border-t border-purple-200/50">
+                            <p class="text-xs text-purple-700 line-clamp-2 font-medium leading-relaxed">${animal.food}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAnimals(animals) {
+            const grid = document.getElementById('animalGrid');
+            const loading = document.getElementById('loading');
+            const endMessage = document.getElementById('endMessage');
+            
+            if(currentPage === 0) {
+                grid.innerHTML = '';
+                displayedAnimals = [];
+                endMessage.classList.add('hidden');
+            }
+            
+            const start = currentPage * itemsPerPage;
+            const end = start + itemsPerPage;
+            const toShow = animals.slice(start, end);
+            
+            if(toShow.length === 0 && currentPage === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-20">
+                        <div class="text-6xl mb-4">🔍</div>
+                        <h4 class="text-2xl font-black text-purple-900 mb-2">No Species Found</h4>
+                        <p class="text-purple-600">Try adjusting your search terms</p>
+                    </div>
+                `;
+                document.getElementById('showingCount').textContent = 'Showing 0 of 0';
+                return;
+            }
+            
+            toShow.forEach((animal, idx) => {
+                grid.innerHTML += createAnimalCard(animal, start + idx);
+            });
+            
+            displayedAnimals = [...displayedAnimals, ...toShow];
+            
+            // Update showing count
+            const showingText = currentPage === 0 && toShow.length < itemsPerPage 
+                ? `Showing ${toShow.length} of ${animals.length.toLocaleString()}`
+                : `Showing ${displayedAnimals.length} of ${animals.length.toLocaleString()}`;
+            document.getElementById('showingCount').textContent = showingText;
+            
+            // Show/hide loading
+            if(end < animals.length) {
+                loading.classList.remove('hidden');
+            } else {
+                loading.classList.add('hidden');
+                if(animals.length > itemsPerPage) {
+                    endMessage.classList.remove('hidden');
+                }
+            }
+            
+            isLoading = false;
+        }
+
+        function filterAnimals(category) {
+            currentFilter = category;
+            currentPage = 0;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.dataset.filter === category) btn.classList.add('active');
+            });
+            
+            // Update title
+            const titles = {
+                'all': 'All Species',
+                'land': 'Land Animals',
+                'water': 'Marine Life',
+                'air': 'Birds'
+            };
+            document.getElementById('resultsTitle').textContent = titles[category];
+            
+            const filtered = category === 'all' ? allAnimals : allAnimals.filter(a => a.category === category);
+            renderAnimals(filtered);
+            
+            // Close mobile menu if open
+            document.getElementById('mobileMenu').classList.add('hidden');
+        }
+
+        function performSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            currentPage = 0;
+            
+            if(!query) {
+                filterAnimals(currentFilter);
+                return;
+            }
+            
+            const filtered = allAnimals.filter(a => 
+                a.name.toLowerCase().includes(query) || 
+                a.diet.toLowerCase().includes(query) ||
+                a.habitat.toLowerCase().includes(query) ||
+                a.category.toLowerCase().includes(query)
+            );
+            
+            document.getElementById('resultsTitle').textContent = `Search: "${query}"`;
+            renderAnimals(filtered);
+        }
+
+        function quickSearch(term) {
+            document.getElementById('searchInput').value = term;
+            performSearch();
+        }
+
+        // Search input listener with debounce
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if(e.target.value === '') {
+                    filterAnimals(currentFilter);
+                } else {
+                    performSearch();
+                }
+            }, 300);
+        });
+
+        // Enter key search
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') performSearch();
+        });
+
+        // Infinite scroll
+        window.addEventListener('scroll', () => {
+            if(isLoading) return;
+            
+            const scrollPosition = window.innerHeight + window.scrollY;
+            const threshold = document.documentElement.scrollHeight - 1000;
+            
+            if(scrollPosition >= threshold) {
+                const filtered = currentFilter === 'all' ? allAnimals : allAnimals.filter(a => a.category === currentFilter);
+                const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+                const displayList = searchQuery ? filtered.filter(a => 
+                    a.name.toLowerCase().includes(searchQuery) || 
+                    a.diet.toLowerCase().includes(searchQuery)
+                ) : filtered;
+                
+                if((currentPage + 1) * itemsPerPage < displayList.length) {
+                    isLoading = true;
+                    currentPage++;
+                    setTimeout(() => renderAnimals(displayList), 300);
+                }
+            }
+        });
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Detail Modal
+        function showDetail(index) {
+            const animal = allAnimals[index];
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('detailContent');
+            
+            document.getElementById('detailName').textContent = animal.name;
+            document.getElementById('detailCategory').textContent = getCategoryLabel(animal.category);
+            document.getElementById('detailCategory').className = `px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest mb-4 inline-block text-white shadow-lg ${getCategoryClass(animal.category)}`;
+            document.getElementById('detailLifespan').textContent = animal.lifespan;
+            document.getElementById('detailDiet').textContent = animal.diet;
+            document.getElementById('detailFood').textContent = animal.food;
+            document.getElementById('detailHabitat').textContent = animal.habitat;
+            
+            // Create 3D geometric icon for detail view
+            const iconContainer = document.getElementById('detail3DIcon');
+            iconContainer.innerHTML = `
+                <div class="relative w-full h-full">
+                    <div class="absolute inset-0 border-[6px] border-white/30 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                    <div class="absolute inset-4 border-[6px] border-white/20 rounded-full animate-[spin_15s_linear_infinite_reverse]"></div>
+                    <div class="absolute inset-8 border-[6px] border-white/40 rounded-full animate-[spin_20s_linear_infinite]"></div>
+                    <div class="absolute inset-12 border-[6px] border-white/25 rounded-full animate-[spin_12s_linear_infinite_reverse]"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-24 h-24 bg-gradient-to-br from-white/50 to-white/10 backdrop-blur-2xl rounded-3xl transform rotate-45 border-4 border-white/60 shadow-[0_0_60px_rgba(168,85,247,0.6)] animate-pulse"></div>
+                    </div>
+                </div>
+            `;
+            
+            const similarContainer = document.getElementById('detailSimilar');
+            similarContainer.innerHTML = animal.similar.map(s => 
+                `<span class="px-4 py-2 rounded-full bg-purple-500/10 text-purple-800 text-sm font-bold border border-purple-300/50 hover:bg-purple-500/20 hover:scale-105 transition-all cursor-pointer shadow-sm">${s}</span>`
+            ).join('');
+            
+            const statusEl = document.getElementById('detailStatus');
+            const statusColors = getStatusColor(animal.status);
+            statusEl.textContent = animal.status;
+            statusEl.className = `inline-block px-6 py-3 rounded-xl font-black text-lg tracking-wider border-2 shadow-lg ${statusColors}`;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeDetail() {
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('detailContent');
+            
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
+        // Feedback System
+        let selectedRating = 0;
+        
+        function openFeedback() {
+            const modal = document.getElementById('feedbackModal');
+            const content = document.getElementById('feedbackContent');
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeFeedback() {
+            const modal = document.getElementById('feedbackModal');
+            const content = document.getElementById('feedbackContent');
+            
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+                resetFeedback();
+            }, 300);
+        }
+
+        function resetFeedback() {
+            selectedRating = 0;
+            document.querySelectorAll('.star-rating').forEach((star, index) => {
+                star.classList.remove('star-active');
+                star.style.color = '#e9d5ff';
+                star.style.transform = 'scale(1)';
+            });
+            document.getElementById('feedbackMessage').classList.add('hidden');
+        }
+
+        // Star rating interaction
+        document.querySelectorAll('.star-rating').forEach((star, index) => {
+            star.addEventListener('click', function() {
+                selectedRating = index + 1;
+                
+                document.querySelectorAll('.star-rating').forEach((s, i) => {
+                    if(i < selectedRating) {
+                        s.classList.add('star-active');
+                        s.style.color = '#fbbf24';
+                        setTimeout(() => {
+                            s.style.transform = 'scale(1.2)';
+                            setTimeout(() => {
+                                s.style.transform = 'scale(1)';
+                            }, 150);
+                        }, i * 50);
+                    } else {
+                        s.classList.remove('star-active');
+                        s.style.color = '#e9d5ff';
+                        s.style.transform = 'scale(1)';
+                    }
+                });
+                
+                setTimeout(() => {
+                    const message = document.getElementById('feedbackMessage');
+                    const ratingDisplay = document.getElementById('ratingDisplay');
+                    ratingDisplay.textContent = selectedRating;
+                    message.classList.remove('hidden');
+                    
+                    // Animate message
+                    gsap.fromTo(message, 
+                        {scale: 0.8, opacity: 0}, 
+                        {scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)"}
+                    );
+                    
+                    console.log(`Rating ${selectedRating} stars prepared for submission to imgonnatop001@gmail.com`);
+                }, 600);
+            });
+            
+            star.addEventListener('mouseenter', function() {
+                if(!selectedRating) {
+                    this.style.color = '#fbbf24';
+                    this.style.transform = 'scale(1.3) rotate(15deg)';
+                }
+            });
+            
+            star.addEventListener('mouseleave', function() {
+                if(!selectedRating || index >= selectedRating) {
+                    this.style.color = '#e9d5ff';
+                    this.style.transform = 'scale(1)';
+                }
+            });
+        });
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            const feedbackModal = document.getElementById('feedbackModal');
+            const detailModal = document.getElementById('detailModal');
+            if(event.target === feedbackModal) closeFeedback();
+            if(event.target === detailModal) closeDetail();
+        }
+
+        // Navbar scroll effect
+        let lastScroll = 0;
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            const currentScroll = window.pageYOffset;
+            
+            if(currentScroll > 100) {
+                navbar.classList.add('shadow-lg');
+                navbar.style.background = 'rgba(255, 255, 255, 0.4)';
+            } else {
+                navbar.classList.remove('shadow-lg');
+                navbar.style.background = 'rgba(255, 255, 255, 0.25)';
+            }
+            
+            lastScroll = currentScroll;
+        });
+
+        // Initialize
+        filterAnimals('all');
+
+        // Add CSS animation keyframes
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { 
+                    opacity: 0; 
+                    transform: translateY(40px) rotateX(15deg) scale(0.95); 
+                }
+                to { 
+                    opacity: 1; 
+                    transform: translateY(0) rotateX(0) scale(1); 
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
